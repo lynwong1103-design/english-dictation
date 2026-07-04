@@ -164,6 +164,13 @@
   .sentence-item.playing .sentence-index { background: var(--accent); color: #fff; }
   .sentence-content { flex: 1; min-width: 0; }
   .sentence-text { font-size: 16px; line-height: 1.8; color: var(--text); margin-bottom: 6px; }
+  .sentence-trans {
+    font-size: 14px; line-height: 1.6; color: var(--text-light); margin-bottom: 6px;
+    padding-left: 2px; border-left: 3px solid var(--accent-light); padding-left: 10px;
+    display: none; font-weight: 400;
+  }
+  .sentence-trans.visible { display: block; }
+  .sentence-trans .trans-loading { color: var(--text-muted); font-size: 12px; }
   .sentence-text .word { cursor: pointer; padding: 0 1px; border-radius: 3px; transition: all .15s; position: relative; }
   .sentence-text .word:hover { background: #fdf3e2; color: var(--accent); }
   .sentence-text .word.loading { opacity: .5; cursor: wait; }
@@ -379,6 +386,10 @@
       </div>
       <div class="controls-right">
         <button class="ctrl-btn" id="historyBtn">📋 历史</button>
+        <label class="check-toggle">
+          <input type="checkbox" id="transToggle">
+          🌐 翻译
+        </label>
         <label class="check-toggle">
           <input type="checkbox" id="checkModeToggle">
           ✏️ 听写
@@ -800,12 +811,56 @@ const sentenceCount = document.getElementById('sentenceCount');
 const playAllBtn = document.getElementById('playAllBtn');
 const stopAllBtn = document.getElementById('stopAllBtn');
 const checkModeToggle = document.getElementById('checkModeToggle');
+const transToggle = document.getElementById('transToggle');
 const tooltipOverlay = document.getElementById('tooltipOverlay');
 const wordTooltip = document.getElementById('wordTooltip');
 const ttWordText = document.getElementById('ttWordText');
 const ttPhonetic = document.getElementById('ttPhonetic');
 const ttMeanings = document.getElementById('ttMeanings');
 const ttPlayWord = document.getElementById('ttPlayWord');
+
+// ─── Translation ────────────────────────────────────
+let transCache = {};
+let transPending = false;
+
+async function translateSentence(text, index) {
+  if (transCache[index]) return transCache[index];
+  if (index === undefined) return '';
+  try {
+    const q = encodeURIComponent(text);
+    const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=${q}`);
+    const data = await res.json();
+    const translated = data[0]?.[0]?.[0] || '';
+    transCache[index] = translated;
+    // Update the UI if this sentence is still visible
+    const el = document.querySelector(`.sentence-item[data-index="${index}"] .sentence-trans`);
+    if (el) {
+      el.textContent = translated;
+      el.classList.remove('trans-loading');
+    }
+    return translated;
+  } catch {
+    transCache[index] = '';
+    const el = document.querySelector(`.sentence-item[data-index="${index}"] .sentence-trans`);
+    if (el) {
+      el.textContent = '翻译失败';
+      el.classList.remove('trans-loading');
+    }
+    return '';
+  }
+}
+
+function loadAllTranslations() {
+  const showTrans = transToggle.checked;
+  if (!showTrans || sentences.length === 0) return;
+  document.querySelectorAll('.sentence-item').forEach(el => {
+    const idx = parseInt(el.dataset.index);
+    if (idx >= 0 && !transCache[idx]) {
+      const text = sentences[idx];
+      translateSentence(text, idx);
+    }
+  });
+}
 
 function render() {
   if (sentences.length === 0) {
@@ -834,6 +889,7 @@ function render() {
         <div class="sentence-index">${i + 1}</div>
         <div class="sentence-content">
           <div class="sentence-text">${wordHtml}</div>
+          <div class="sentence-trans${transToggle.checked ? ' visible' : ''}" data-index="${i}">${transCache[i] || (transToggle.checked ? '<span class="trans-loading">翻译中…</span>' : '')}</div>
           <div class="sentence-actions">
             <button class="ctrl-btn ${i === playingIndex ? 'playing' : ''}" onclick="playSentence(${i})">
               ${i === playingIndex ? '⏸' : '🔊'} 播放
@@ -1063,8 +1119,12 @@ function switchMode(mode) {
 function doSplit() {
   sentences = splitSentences(textInput.value);
   playingIndex = -1; isPlayingAll = false; playAllQueue = [];
+  transCache = {};
   render(); hideTooltip();
-  if (sentences.length > 0) saveHistoryEntry(textInput.value, sentences);
+  if (sentences.length > 0) {
+    saveHistoryEntry(textInput.value, sentences);
+    if (transToggle.checked) setTimeout(loadAllTranslations, 200);
+  }
 }
 
 function doAudioSplit() {
@@ -1164,6 +1224,17 @@ document.getElementById('tabAudio').addEventListener('click', () => switchMode('
 playAllBtn.addEventListener('click', playAll);
 stopAllBtn.addEventListener('click', stopAll);
 checkModeToggle.addEventListener('change', render);
+
+// ─── Translation toggle ─────────────────────────────
+transToggle.addEventListener('change', () => {
+  if (transToggle.checked && sentences.length > 0) {
+    // Show translation divs and start loading
+    document.querySelectorAll('.sentence-trans').forEach(el => el.classList.add('visible'));
+    loadAllTranslations();
+  } else {
+    document.querySelectorAll('.sentence-trans').forEach(el => el.classList.remove('visible'));
+  }
+});
 
 // History
 document.getElementById('historyBtn').addEventListener('click', openHistoryModal);
