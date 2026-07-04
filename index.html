@@ -349,13 +349,18 @@
       </div>
 
       <!-- Transcript area -->
-      <textarea id="audioTranscript" placeholder="粘贴或输入音频对应的英文文本（可选）&#10;&#10;如果留空，将使用浏览器语音识别自动转写（Chrome 推荐）"></textarea>
+      <textarea id="audioTranscript" placeholder="输入或粘贴音频对应的英文文本（建议方式）&#10;&#10;如果音频清晰且使用 Chrome 浏览器，也可尝试下方语音转写"></textarea>
       <div class="audio-transcribe-row">
-        <button class="btn btn-accent btn-sm" id="transcribeBtn">🎙️ 语音转写</button>
-        <span class="or-divider">或</span>
         <button class="btn btn-primary btn-sm" id="audioSplitBtn">✂️ 拆分句子</button>
+        <span class="or-divider" style="margin:0 4px;">或</span>
+        <button class="btn btn-accent btn-sm" id="transcribeBtn">🎙️ 尝试语音转写</button>
       </div>
-      <div class="input-hint" id="audioStatus"></div>
+      <div class="input-hint" id="audioStatus">
+        💡 <strong>推荐方式：</strong>已有文本时直接粘贴到上方，点击「拆分句子」即可。
+        <span style="color:var(--accent);font-size:11px;display:block;margin-top:4px;">
+          ⚠️ 语音转写需要 Chrome 浏览器，通过麦克风识别扬声器播放的音频，准确度受环境噪音影响
+        </span>
+      </div>
     </div>
   </div>
 
@@ -674,7 +679,7 @@ function startRecognition() {
   recognition.start();
   isRecognizing = true;
   document.getElementById('transcribeBtn').textContent = '⏹ 停止转写';
-  statusMsg('🎙️ 正在聆听音频，请确保音频在播放...');
+  statusMsg('🎙️ 正在通过麦克风识别… 请确保：① 音频正在扬声器播放 ② 环境安静 ③ 已允许麦克风权限');
   
   // If audio isn't playing, start it
   if (audioBuffer && !audioIsPlaying) {
@@ -1053,8 +1058,16 @@ function doAudioSplit() {
   if (sentences.length > 0) saveHistoryEntry(text, sentences);
 }
 
-function statusMsg(msg) {
-  document.getElementById('audioStatus').textContent = msg;
+function statusMsg(msg, isTemp = true) {
+  const el = document.getElementById('audioStatus');
+  if (isTemp) {
+    el.innerHTML = `<span style="color:var(--accent)">${msg}</span>`;
+    setTimeout(() => {
+      el.innerHTML = '💡 <strong>推荐方式：</strong>已有文本时直接粘贴到上方，点击「拆分句子」即可。';
+    }, 15000);
+  } else {
+    el.innerHTML = msg;
+  }
 }
 
 // ═══════════════════════════════════════════════════════
