@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>逐句听写 · 英语听写练习</title>
+<style>
+  :root {
+    --primary: #2c3e50;
+    --primary-light: #3d5166;
+    --accent: #b8860b;
+    --accent-light: #daa520;
+    --bg: #f7f5f1;
+    --card-bg: #ffffff;
+    --text: #2d3748;
+    --text-light: #718096;
+    --text-muted: #a0aec0;
+    --border: #e8e4de;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.06);
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font); background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 0 0 60px; display: flex; justify-content: center;
+  }
+  .container { max-width: 900px; width: 100%; padding: 0 20px; }
+
+  /* ── Mode Tabs ── */
+  .mode-tabs {
+    display: flex; gap: 0; background: var(--card-bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow); margin-top: 20px; overflow: hidden; border-bottom: 2px solid var(--border);
+  }
+  .mode-tab {
+    flex: 1; padding: 14px 16px; font-size: 15px; font-weight: 600; font-family: var(--font);
+    border: none; background: transparent; color: var(--text-light); cursor: pointer;
+    transition: all .2s; letter-spacing: .5px; position: relative;
+  }
+  .mode-tab:hover { background: #faf8f5; color: var(--text); }
+  .mode-tab.active { color: var(--primary); background: #fff; }
+  .mode-tab.active::after {
+    content: ''; position: absolute; bottom: -2px; left: 20%; right: 20%;
+    height: 3px; background: var(--accent); border-radius: 3px 3px 0 0;
+  }
+
+  /* ── Header ── */
+  header { padding: 24px 0 20px; text-align: center; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  header h1 { font-size: 26px; font-weight: 700; color: var(--primary); letter-spacing: 3px; }
+  header h1 .accent { color: var(--accent); }
+  header .sub { color: var(--text-light); font-size: 13px; margin-top: 4px; letter-spacing: 1px; }
+
+  /* ── Card ── */
+  .card { background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 24px 28px; margin-bottom: 20px; }
+
+  /* ── Audio Upload ── */
+  .audio-upload-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px 20px;
+    text-align: center; cursor: pointer; transition: all .2s; background: #fcfcf9;
+  }
+  .audio-upload-zone:hover { border-color: var(--accent); background: #fefbf5; }
+  .audio-upload-zone.dragover { border-color: var(--accent); background: #fdf6e8; }
+  .audio-upload-zone .icon { font-size: 36px; margin-bottom: 8px; }
+  .audio-upload-zone .label { font-size: 15px; font-weight: 600; color: var(--text-light); }
+  .audio-upload-zone .hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  .audio-player-bar {
+    display: none; align-items: center; gap: 12px; padding: 12px 16px;
+    background: #f7f5f1; border-radius: var(--radius); margin-top: 12px;
+  }
+  .audio-player-bar.visible { display: flex; }
+  .audio-player-bar .play-btn { 
+    background: var(--primary); color: #fff; border: none; width: 36px; height: 36px;
+    border-radius: 50%; cursor: pointer; font-size: 16px; display: flex; align-items: center;
+    justify-content: center; transition: all .15s; flex-shrink: 0;
+  }
+  .audio-player-bar .play-btn:hover { background: var(--primary-light); }
+  .audio-player-bar .file-name { font-size: 13px; color: var(--text); font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; }
+  .audio-player-bar .time { font-size: 12px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+  .audio-progress-wrap { flex: 1; height: 6px; background: #e0dcd6; border-radius: 3px; cursor: pointer; position: relative; min-width: 60px; }
+  .audio-progress-fill { height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width .1s linear; }
+  .audio-progress-cta { font-size: 12px; color: var(--text-muted); flex: 1; text-align: center; }
+
+  .audio-transcribe-row {
+    display: flex; gap: 10px; align-items: center; margin: 12px 0 0;
+  }
+  .audio-transcribe-row .or-divider { font-size: 12px; color: var(--text-muted); }
+
+  /* ── Text Input ── */
+  .input-card textarea, .audio-card textarea {
+    width: 100%; min-height: 80px; padding: 12px 14px;
+    border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 15px;
+    line-height: 1.8; resize: vertical; transition: all .2s; font-family: var(--font);
+    background: #fcfcf9; color: var(--text);
+  }
+  .input-card textarea:focus, .audio-card textarea:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(184,134,11,.12); background: #fff;
+  }
+  .input-card textarea::placeholder, .audio-card textarea::placeholder { color: #c5c0b8; }
+  .input-hint { font-size: 12px; color: var(--text-muted); margin: 8px 0 0; }
+  .input-hint kbd { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 11px; border: 1px solid var(--border); font-family: inherit; color: var(--text-light); }
+  .input-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 9px 22px; border: none; border-radius: var(--radius); font-size: 14px;
+    font-weight: 600; cursor: pointer; transition: all .2s;
+    display: inline-flex; align-items: center; gap: 5px; font-family: var(--font);
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-secondary { background: #eef0f2; color: var(--text-light); }
+  .btn-secondary:hover { background: #e2e6ea; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: #9a7209; }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+  /* ── Controls bar ── */
+  .controls-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap; padding: 0 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 16px;
+  }
+  .controls-left { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .controls-left .count { font-size: 13px; color: var(--text-light); }
+  .controls-left .count strong { color: var(--primary); }
+  .controls-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .speed-control { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-light); }
+  .speed-control input[type="range"] { width: 80px; accent-color: var(--accent); cursor: pointer; }
+  .speed-control .speed-label { font-weight: 600; color: var(--accent); min-width: 40px; text-align: center; font-size: 13px; }
+  .speed-control .speed-icon { font-size: 14px; }
+
+  .check-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-light); cursor: pointer; user-select: none; }
+  .check-toggle input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+
+  .ctrl-btn {
+    background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px;
+    font-size: 12px; cursor: pointer; color: var(--text-light); transition: all .2s; font-family: var(--font);
+  }
+  .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); background: #fefbf5; }
+  .ctrl-btn.playing { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .ctrl-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── Sentences ── */
+  .sentences-area { min-height: 60px; }
+  .empty-state { text-align: center; padding: 40px 0 28px; color: var(--text-muted); }
+  .empty-state .icon { font-size: 38px; margin-bottom: 8px; opacity: .6; }
+  .empty-state p { font-size: 14px; }
+
+  .sentence-item {
+    padding: 12px 0; border-bottom: 1px solid #f2efe9; display: flex; gap: 12px;
+    align-items: flex-start; transition: background .15s; border-radius: 4px; padding-left: 4px; padding-right: 4px;
+  }
+  .sentence-item:last-child { border-bottom: none; }
+  .sentence-item.playing { background: #fdf9f0; margin: 0 -4px; padding-left: 8px; padding-right: 8px; border-radius: 8px; }
+
+  .sentence-index {
+    width: 26px; height: 26px; border-radius: 50%; background: #eef0f2;
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+    color: var(--text-light); flex-shrink: 0; margin-top: 3px; transition: all .2s;
+  }
+  .sentence-item.playing .sentence-index { background: var(--accent); color: #fff; }
+  .sentence-content { flex: 1; min-width: 0; }
+  .sentence-text { font-size: 16px; line-height: 1.8; color: var(--text); margin-bottom: 6px; }
+  .sentence-text .word { cursor: pointer; padding: 0 1px; border-radius: 3px; transition: all .15s; position: relative; }
+  .sentence-text .word:hover { background: #fdf3e2; color: var(--accent); }
+  .sentence-text .word.loading { opacity: .5; cursor: wait; }
+  .sentence-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .dictation-input {
+    width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 6px;
+    font-size: 14px; line-height: 1.6; margin-top: 4px; background: #fcfcf9;
+    font-family: var(--font); transition: all .2s;
+  }
+  .dictation-input:focus { outline: none; border-color: var(--accent); background: #fff; }
+  .dictation-correct { border-color: #2f855a !important; background: #f0faf4 !important; }
+  .dictation-wrong   { border-color: #c53030 !important; background: #fef2f2 !important; }
+
+  /* ── Word Tooltip ── */
+  .tooltip-overlay { display: none; position: fixed; inset: 0; z-index: 999; background: transparent; }
+  .tooltip-overlay.visible { display: block; }
+  .word-tooltip {
+    position: fixed; z-index: 1000; background: var(--card-bg); border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06); padding: 18px 22px;
+    max-width: 380px; min-width: 200px; display: none; border: 1px solid #eee; animation: popIn .2s ease;
+  }
+  @keyframes popIn { from { opacity: 0; transform: translateY(6px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .word-tooltip.visible { display: block; }
+  .tt-word { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .tt-word .tt-sound { cursor: pointer; font-size: 14px; color: var(--accent); transition: color .15s; }
+  .tt-word .tt-sound:hover { color: var(--accent-light); }
+  .tt-phonetic { font-size: 14px; color: var(--text-muted); font-family: 'Arial', sans-serif; margin-bottom: 10px; }
+  .tt-phonetic .play-phonetic { cursor: pointer; color: var(--accent); margin-left: 6px; font-size: 12px; }
+  .tt-meaning-item { padding: 6px 0; border-bottom: 1px solid #f5f2ed; }
+  .tt-meaning-item:last-child { border-bottom: none; }
+  .tt-pos { font-size: 11px; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: .8px; }
+  .tt-def { font-size: 14px; color: var(--text); margin-top: 2px; line-height: 1.5; }
+  .tt-example { font-size: 12px; color: var(--text-muted); font-style: italic; margin-top: 2px; }
+  .tt-loading { color: var(--text-muted); font-size: 14px; padding: 12px 0; text-align: center; }
+  .tt-error { color: #c53030; font-size: 13px; padding: 8px 0; }
+
+  /* ── VocabEar Promo ── */
+  .promo-section { margin-top: 28px; }
+  .promo-card {
+    background: linear-gradient(135deg, #1a365d 0%, #2c3e50 50%, #1e293b 100%);
+    border-radius: var(--radius-lg); padding: 28px 32px; color: #f0ece4;
+    display: flex; gap: 28px; align-items: center;
+    box-shadow: 0 4px 20px rgba(26,54,93,.20); position: relative; overflow: hidden;
+  }
+  .promo-card::before { content: ''; position: absolute; top: -60%; right: -20%; width: 300px; height: 300px; border-radius: 50%; background: rgba(218,165,32,.06); }
+  .promo-card::after { content: ''; position: absolute; bottom: -40%; left: -10%; width: 200px; height: 200px; border-radius: 50%; background: rgba(218,165,32,.04); }
+  .promo-info { flex: 1; position: relative; z-index: 1; }
+  .promo-info .promo-badge { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-light); border: 1px solid rgba(218,165,32,.35); border-radius: 4px; padding: 2px 10px; margin-bottom: 10px; }
+  .promo-info h3 { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+  .promo-info h3 span { color: var(--accent-light); }
+  .promo-info .promo-tagline { font-size: 14px; color: #b0b8c8; margin: 4px 0 14px; }
+  .promo-features { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .promo-features .pf { font-size: 12px; color: #c8d0dc; display: flex; align-items: center; gap: 4px; }
+  .promo-link { display: inline-flex; align-items: center; gap: 6px; background: rgba(218,165,32,.15); border: 1px solid rgba(218,165,32,.3); color: var(--accent-light); padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; text-decoration: none; font-family: var(--font); }
+  .promo-link:hover { background: rgba(218,165,32,.25); border-color: var(--accent-light); }
+  .promo-qr { flex-shrink: 0; position: relative; z-index: 1; text-align: center; }
+  .promo-qr img { width: 120px; height: 120px; border-radius: 8px; display: block; background: #fff; padding: 6px; }
+  .promo-qr .qr-label { font-size: 10px; color: #8896a8; margin-top: 6px; letter-spacing: .5px; }
+  .promo-note { text-align: center; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+
+  /* ── Footer ── */
+  .footer { text-align: center; padding: 36px 0 20px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 32px; }
+
+  /* ── History Modal ── */
+  .history-overlay { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: fadeIn .2s ease; }
+  .history-overlay.visible { display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .history-modal { background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: 0 12px 48px rgba(0,0,0,.15); width: 100%; max-width: 620px; max-height: 80vh; display: flex; flex-direction: column; animation: modalIn .25s ease; }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(20px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .history-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .history-header h2 { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .history-header h2 span { color: var(--text-muted); font-weight: 400; font-size: 14px; margin-left: 6px; }
+  .history-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); padding: 4px 8px; border-radius: 6px; transition: all .15s; line-height: 1; }
+  .history-close:hover { background: var(--bg); color: var(--text); }
+  .history-body { padding: 12px 24px 20px; overflow-y: auto; flex: 1; min-height: 100px; }
+  .history-empty { text-align: center; padding: 40px 0; color: var(--text-muted); }
+  .history-empty .icon { font-size: 36px; margin-bottom: 8px; opacity: .5; }
+  .history-empty p { font-size: 14px; }
+  .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; cursor: pointer; transition: all .15s; border: 1px solid transparent; margin-bottom: 6px; }
+  .history-item:hover { background: #f7f5f1; border-color: var(--border); }
+  .history-item:active { background: #efebe5; }
+  .history-item-icon { flex-shrink: 0; width: 36px; height: 36px; border-radius: 8px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .history-item-info { flex: 1; min-width: 0; }
+  .history-item-title { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history-item-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; display: flex; gap: 12px; }
+  .history-item-del { flex-shrink: 0; background: none; border: none; font-size: 16px; color: #ccc; cursor: pointer; padding: 4px 6px; border-radius: 4px; transition: all .15s; line-height: 1; opacity: 0; }
+  .history-item:hover .history-item-del { opacity: 1; }
+  .history-item-del:hover { color: #c53030; background: #fef2f2; }
+  .history-footer { padding: 12px 24px 18px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .history-footer .count-light { font-size: 12px; color: var(--text-muted); }
+  .history-clear-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 16px; font-size: 12px; color: var(--text-light); cursor: pointer; transition: all .15s; font-family: var(--font); }
+  .history-clear-btn:hover { border-color: #c53030; color: #c53030; background: #fef2f2; }
+
+  /* ── Responsive ── */
+  @media (max-width: 700px) {
+    .container { padding: 0 14px; }
+    header { padding: 18px 0 14px; }
+    header h1 { font-size: 20px; letter-spacing: 2px; }
+    .card { padding: 16px 18px; }
+    .input-card textarea, .audio-card textarea { min-height: 70px; font-size: 14px; }
+    .promo-card { flex-direction: column; text-align: center; padding: 24px 20px; }
+    .promo-features { justify-content: center; }
+    .promo-link { width: 100%; justify-content: center; }
+    .promo-qr img { width: 100px; height: 100px; }
+    .controls-left { width: 100%; }
+    .controls-left .count { width: 100%; }
+    .speed-control { margin-left: 0; }
+    .word-tooltip { max-width: 300px; padding: 14px 16px; }
+    .sentence-text { font-size: 15px; }
+    .sentence-item { padding: 10px 0; }
+    .history-overlay.visible { padding: 16px 10px; align-items: stretch; }
+    .history-modal { max-height: 90vh; }
+    .history-header { padding: 16px 18px 10px; }
+    .history-body { padding: 8px 18px 14px; }
+    .history-footer { padding: 10px 18px 14px; flex-direction: column; gap: 8px; }
+    .history-item { padding: 10px 12px; }
+    .history-item-del { opacity: 1; }
+    .mode-tab { font-size: 13px; padding: 12px 10px; }
+    .audio-upload-zone { padding: 20px 14px; }
+    .audio-player-bar { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Mode Tabs -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="text" id="tabText">📝 文本听写</button>
+    <button class="mode-tab" data-mode="audio" id="tabAudio">🎤 音频听写</button>
+  </div>
+
+  <!-- Text Mode Input -->
+  <div id="panelText" class="mode-panel">
+    <header>
+      <h1>📝 <span class="accent">逐句听写</span></h1>
+      <div class="sub">粘贴英文 · 回车拆分 · 逐句听写 · 点击查词</div>
+    </header>
+    <div class="card input-card">
+      <textarea id="textInput" placeholder="Paste an English passage here...&#10;&#10;e.g. The quick brown fox jumps over the lazy dog. It is a beautiful day today."></textarea>
+      <div class="input-hint">粘贴后按 <kbd>Enter</kbd> 拆分 · <kbd>Shift+Enter</kbd> 换行</div>
+      <div class="input-actions">
+        <button class="btn btn-secondary" id="clearBtn">🗑 清空</button>
+        <button class="btn btn-primary" id="splitBtn">✂️ 拆分句子</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Mode Input -->
+  <div id="panelAudio" class="mode-panel" style="display:none;">
+    <header>
+      <h1>🎤 <span class="accent">音频听写</span></h1>
+      <div class="sub">上传音频 → 自动转写 → 逐句听写</div>
+    </header>
+    <div class="card audio-card">
+      <!-- Upload Zone -->
+      <div class="audio-upload-zone" id="uploadZone">
+        <div class="icon">🎧</div>
+        <div class="label">点击选择或拖拽音频文件</div>
+        <div class="hint">支持 MP3 / WAV / M4A / AAC</div>
+        <input type="file" id="audioFileInput" accept="audio/*" style="display:none;">
+      </div>
+
+      <!-- Player Bar -->
+      <div class="audio-player-bar" id="audioPlayerBar">
+        <button class="play-btn" id="audioPlayBtn">▶</button>
+        <span class="file-name" id="audioFileName"></span>
+        <div class="audio-progress-wrap" id="audioProgressWrap">
+          <div class="audio-progress-fill" id="audioProgressFill"></div>
+        </div>
+        <span class="time" id="audioTimeDisplay">0:00 / 0:00</span>
+      </div>
+
+      <!-- Transcript area -->
+      <textarea id="audioTranscript" placeholder="粘贴或输入音频对应的英文文本（可选）&#10;&#10;如果留空，将使用浏览器语音识别自动转写（Chrome 推荐）"></textarea>
+      <div class="audio-transcribe-row">
+        <button class="btn btn-accent btn-sm" id="transcribeBtn">🎙️ 语音转写</button>
+        <span class="or-divider">或</span>
+        <button class="btn btn-primary btn-sm" id="audioSplitBtn">✂️ 拆分句子</button>
+      </div>
+      <div class="input-hint" id="audioStatus"></div>
+    </div>
+  </div>
+
+  <!-- Shared: Sentences -->
+  <div class="card">
+    <div class="controls-bar" id="controlsBar" style="display:none;">
+      <div class="controls-left">
+        <span class="count">共 <strong id="sentenceCount">0</strong> 句</span>
+        <div class="speed-control">
+          <span class="speed-icon">🐢</span>
+          <input type="range" id="speedSlider" min="0.3" max="2.0" step="0.1" value="0.9">
+          <span class="speed-icon">🐇</span>
+          <span class="speed-label" id="speedLabel">0.9x</span>
+        </div>
+      </div>
+      <div class="controls-right">
+        <button class="ctrl-btn" id="historyBtn">📋 历史</button>
+        <label class="check-toggle">
+          <input type="checkbox" id="checkModeToggle">
+          ✏️ 听写
+        </label>
+        <button class="ctrl-btn" id="playAllBtn">▶ 全部</button>
+        <button class="ctrl-btn" id="stopAllBtn">⏹ 停止</button>
+      </div>
+    </div>
+    <div class="sentences-area" id="sentenceList">
+      <div class="empty-state">
+        <div class="icon">📝</div>
+        <p>选择文本或音频模式开始听写</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- VocabEar Promo -->
+  <div class="promo-section">
+    <div class="promo-card">
+      <div class="promo-info">
+        <div class="promo-badge">微信小程序</div>
+        <h3><span>Vocab</span>Ear</h3>
+        <div class="promo-tagline">雅思词汇 · 逐句听写 · 智能复习</div>
+        <div class="promo-features">
+          <span class="pf">📖 5252 IELTS 词汇</span>
+          <span class="pf">🔊 美式发音</span>
+          <span class="pf">📝 175 组科学分组</span>
+          <span class="pf">🔄 艾宾浩斯复习</span>
+        </div>
+        <div id="promoAction">
+          <a class="promo-link" id="promoBtn" href="weixin://dl/business/?appid=wxc75e6cd99d1d7547" target="_blank">📲 在微信中打开</a>
+        </div>
+      </div>
+      <div class="promo-qr">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://dl/business/?appid=wxc75e6cd99d1d7547" alt="VocabEar QR Code" loading="lazy">
+        <div class="qr-label">微信扫码体验</div>
+      </div>
+    </div>
+    <div class="promo-note" id="promoNote"></div>
+  </div>
+
+  <div class="footer">逐句听写 · 英语学习工具 · 免费开源</div>
+</div>
+
+<!-- History Modal -->
+<div class="history-overlay" id="historyOverlay">
+  <div class="history-modal">
+    <div class="history-header">
+      <h2>📋 历史记录 <span id="historyCount"></span></h2>
+      <button class="history-close" id="historyCloseBtn">✕</button>
+    </div>
+    <div class="history-body" id="historyBody"></div>
+    <div class="history-footer">
+      <span class="count-light" id="historyFooterInfo"></span>
+      <button class="history-clear-btn" id="historyClearBtn">🗑 清空全部</button>
+    </div>
+  </div>
+</div>
+
+<!-- Word Tooltip -->
+<div class="tooltip-overlay" id="tooltipOverlay"></div>
+<div class="word-tooltip" id="wordTooltip">
+  <div class="tt-word">
+    <span id="ttWordText"></span>
+    <span class="tt-sound" id="ttPlayWord">🔊</span>
+  </div>
+  <div class="tt-phonetic" id="ttPhonetic"></div>
+  <div class="tt-meanings" id="ttMeanings"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  MODE STATE
+// ═══════════════════════════════════════════════════════
+let currentMode = 'text'; // 'text' | 'audio'
+let sentences = [];
+let isSpeaking = false;
+let playingIndex = -1;
+let playbackRate = 0.9;
+
+// ═══════════════════════════════════════════════════════
+//  AUDIO ENGINE
+// ═══════════════════════════════════════════════════════
+let audioCtx = null;
+let audioBuffer = null;
+let audioSource = null;
+let audioStartTime = 0;
+let audioPauseOffset = 0;
+let audioDuration = 0;
+let audioIsPlaying = false;
+let audioFileName = '';
+let audioSegmentTimings = []; // [{start, duration}] for each sentence
+let rafId = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+async function loadAudioFile(file) {
+  const ctx = getAudioCtx();
+  stopAudio();
+  const arrayBuffer = await file.arrayBuffer();
+  audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+  audioDuration = audioBuffer.duration;
+  audioFileName = file.name;
+  audioPauseOffset = 0;
+  audioSegmentTimings = [];
+  document.getElementById('audioFileName').textContent = file.name;
+  document.getElementById('audioPlayerBar').classList.add('visible');
+  updateTimeDisplay();
+  statusMsg(`已加载：${file.name} (${formatDuration(audioDuration)})`);
+}
+
+function playAudio(offset = 0) {
+  if (!audioBuffer) return;
+  const ctx = getAudioCtx();
+  stopAudio();
+  
+  audioSource = ctx.createBufferSource();
+  audioSource.buffer = audioBuffer;
+  audioSource.playbackRate.value = playbackRate;
+  
+  const gain = ctx.createGain();
+  gain.gain.value = 1;
+  audioSource.connect(gain);
+  gain.connect(ctx.destination);
+  
+  audioSource.start(0, offset);
+  audioStartTime = ctx.currentTime - offset;
+  audioPauseOffset = offset;
+  audioIsPlaying = true;
+  document.getElementById('audioPlayBtn').textContent = '⏸';
+  
+  audioSource.onended = () => {
+    if (audioIsPlaying) {
+      audioIsPlaying = false;
+      document.getElementById('audioPlayBtn').textContent = '▶';
+      cancelAnimationFrame(rafId);
+    }
+  };
+  
+  startProgressTracking();
+}
+
+function pauseAudio() {
+  if (!audioIsPlaying || !audioSource) return;
+  const ctx = getAudioCtx();
+  audioPauseOffset = ctx.currentTime - audioStartTime;
+  audioSource.stop();
+  audioSource = null;
+  audioIsPlaying = false;
+  document.getElementById('audioPlayBtn').textContent = '▶';
+  cancelAnimationFrame(rafId);
+}
+
+function stopAudio() {
+  if (audioSource) {
+    try { audioSource.stop(); } catch(e) {}
+    audioSource = null;
+  }
+  audioIsPlaying = false;
+  document.getElementById('audioPlayBtn').textContent = '▶';
+  cancelAnimationFrame(rafId);
+}
+
+function seekAudio(offset) {
+  const wasPlaying = audioIsPlaying;
+  stopAudio();
+  audioPauseOffset = Math.max(0, Math.min(offset, audioDuration));
+  updateTimeDisplay();
+  if (wasPlaying) playAudio(audioPauseOffset);
+}
+
+function startProgressTracking() {
+  cancelAnimationFrame(rafId);
+  function tick() {
+    if (!audioIsPlaying) return;
+    const ctx = getAudioCtx();
+    const current = ctx.currentTime - audioStartTime;
+    const pct = Math.min(100, (current / audioDuration) * 100);
+    document.getElementById('audioProgressFill').style.width = pct + '%';
+    updateTimeDisplay(current);
+    if (current < audioDuration) {
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+  rafId = requestAnimationFrame(tick);
+}
+
+function updateTimeDisplay(current) {
+  const cur = current !== undefined ? current : audioPauseOffset;
+  document.getElementById('audioTimeDisplay').textContent =
+    formatDuration(cur) + ' / ' + formatDuration(audioDuration);
+}
+
+function formatDuration(s) {
+  if (!s || isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+
+// ─── Audio segment timing ────────────────────────────
+function estimateSegmentTimings(text, duration) {
+  const sents = splitSentences(text);
+  if (sents.length === 0 || !duration || duration <= 0) return [];
+  const totalChars = sents.reduce((sum, s) => sum + s.replace(/\s+/g, '').length, 0);
+  if (totalChars === 0) return sents.map(() => ({ start: 0, duration: 0 }));
+  
+  let start = 0;
+  return sents.map(s => {
+    const chars = s.replace(/\s+/g, '').length;
+    const segDuration = Math.max(0.5, (chars / totalChars) * duration);
+    const seg = { start, duration: segDuration };
+    start += segDuration;
+    return seg;
+  });
+}
+
+function getCurrentAudioTime() {
+  if (audioIsPlaying) {
+    const ctx = getAudioCtx();
+    return ctx.currentTime - audioStartTime;
+  }
+  return audioPauseOffset;
+}
+
+// ─── Speech Recognition ──────────────────────────────
+let recognition = null;
+let isRecognizing = false;
+
+function startRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    statusMsg('❌ 您的浏览器不支持语音识别，请使用 Chrome');
+    return;
+  }
+  if (isRecognizing) return;
+  
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  
+  let finalText = '';
+  const ta = document.getElementById('audioTranscript');
+  
+  recognition.onresult = (e) => {
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const result = e.results[i];
+      if (result.isFinal) {
+        finalText += result[0].transcript + ' ';
+        ta.value = finalText;
+        ta.scrollTop = ta.scrollHeight;
+      }
+    }
+  };
+  
+  recognition.onerror = (e) => {
+    console.warn('SpeechRecognition error:', e.error);
+    if (e.error === 'no-speech') {
+      statusMsg('⚠️ 未检测到语音，请确保音频正在播放');
+    } else if (e.error === 'aborted') {
+      statusMsg('⏹ 语音识别已停止');
+    } else {
+      statusMsg('❌ 语音识别错误: ' + e.error);
+    }
+    isRecognizing = false;
+    document.getElementById('transcribeBtn').textContent = '🎙️ 语音转写';
+    document.getElementById('transcribeBtn').disabled = false;
+  };
+  
+  recognition.onend = () => {
+    isRecognizing = false;
+    document.getElementById('transcribeBtn').textContent = '🎙️ 语音转写';
+    document.getElementById('transcribeBtn').disabled = false;
+    if (finalText.trim()) {
+      statusMsg(`✅ 转写完成，共 ${finalText.split(/\s+/).length} 个词`);
+    }
+  };
+  
+  // Start the audio playback and recognition together
+  if (audioBuffer && !audioIsPlaying) {
+    playAudio(0);
+  }
+  
+  recognition.start();
+  isRecognizing = true;
+  document.getElementById('transcribeBtn').textContent = '⏹ 停止转写';
+  statusMsg('🎙️ 正在聆听音频，请确保音频在播放...');
+  
+  // If audio isn't playing, start it
+  if (audioBuffer && !audioIsPlaying) {
+    playAudio(0);
+  }
+}
+
+function stopRecognition() {
+  if (recognition && isRecognizing) {
+    recognition.stop();
+    isRecognizing = false;
+    document.getElementById('transcribeBtn').textContent = '🎙️ 语音转写';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SPEECH SYNTHESIS (for text mode)
+// ═══════════════════════════════════════════════════════
+let preferredVoice = null;
+let currentUtterance = null;
+
+function initVoice() {
+  return new Promise((resolve) => {
+    let voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) { preferredVoice = findBestVoice(voices); resolve(); }
+    else { window.speechSynthesis.onvoiceschanged = () => { preferredVoice = findBestVoice(window.speechSynthesis.getVoices()); resolve(); }; }
+  });
+}
+
+function findBestVoice(voices) {
+  console.log('🗣 Available TTS voices:', voices.map(v => `${v.name} [${v.lang}]`).join(', '));
+  const siri2 = voices.find(v => v.lang.startsWith('en-US') && v.name.toLowerCase() === 'siri voice 2');
+  if (siri2) return logVoice(siri2);
+  const anySiri = voices.find(v => v.lang.startsWith('en-US') && v.name.toLowerCase().includes('siri'));
+  if (anySiri) return logVoice(anySiri);
+  const samantha = voices.find(v => v.lang.startsWith('en-US') && v.name.toLowerCase().includes('samantha') && (v.name.includes('Premium') || v.name.includes('Enhanced')));
+  if (samantha) return logVoice(samantha);
+  const samanthaPlain = voices.find(v => v.lang.startsWith('en-US') && v.name.toLowerCase().includes('samantha'));
+  if (samanthaPlain) return logVoice(samanthaPlain);
+  const premiumUs = voices.filter(v => v.lang.startsWith('en-US') && (v.name.includes('Premium') || v.name.includes('Enhanced') || v.name.includes('Neural')));
+  const malePremium = premiumUs.find(v => v.name.toLowerCase().includes('male') || ['aaron','fred','tom'].some(n => v.name.toLowerCase().includes(n)));
+  if (malePremium) return logVoice(malePremium);
+  if (premiumUs.length > 0) return logVoice(premiumUs[0]);
+  const knownNatural = ['samantha','alex','karen','zoe','rishi','daniel'];
+  for (const name of knownNatural) { const f = voices.find(v => v.lang.startsWith('en-US') && v.name.toLowerCase().includes(name)); if (f) return logVoice(f); }
+  const usVoice = voices.find(v => v.lang.startsWith('en-US'));
+  if (usVoice) return logVoice(usVoice);
+  const enVoice = voices.find(v => v.lang.startsWith('en'));
+  if (enVoice) return logVoice(enVoice);
+  return voices[0] || null;
+}
+function logVoice(voice) { console.log('✅ Selected voice:', voice.name, `[${voice.lang}]`); return voice; }
+
+function speak(text, { rate, onEnd } = {}) {
+  if (!text || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'en-US'; utter.rate = rate ?? playbackRate; utter.pitch = 1.0;
+  if (preferredVoice) utter.voice = preferredVoice;
+  if (onEnd) utter.onend = onEnd;
+  currentUtterance = utter;
+  window.speechSynthesis.speak(utter);
+}
+
+function speakWord(word) { speak(word, { rate: Math.max(0.3, playbackRate * 0.85) }); }
+function stopSpeech() { window.speechSynthesis.cancel(); currentUtterance = null; }
+
+// ═══════════════════════════════════════════════════════
+//  SENTENCE SPLITTING
+// ═══════════════════════════════════════════════════════
+function splitSentences(text) {
+  let cleaned = text.replace(/\s+/g, ' ').trim();
+  if (!cleaned) return [];
+  const abbreviations = /(Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|Ave|vs|etc|dept|est|approx|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\./gi;
+  const protected = cleaned.replace(abbreviations, (m) => m.replace('.', '\u0000'));
+  const raw = protected.split(/(?<=[.!?])\s+/);
+  return raw.map(s => s.replace(/\u0000/g, '.').trim()).filter(s => s.length > 0);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DICTIONARY API
+// ═══════════════════════════════════════════════════════
+async function lookupWord(word) {
+  const clean = word.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '').toLowerCase();
+  if (!clean) return null;
+  const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(clean)}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return { error: res.status === 404 ? '未找到该单词' : `查询失败 (${res.status})` };
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return { error: '未找到该单词' };
+    const entry = data[0];
+    const phonetic = entry.phonetic || (entry.phonetics && entry.phonetics[0]?.text) || '';
+    const audioUrl = entry.phonetics?.find(p => p.audio)?.audio || '';
+    const meanings = [];
+    for (const m of entry.meanings || []) {
+      for (const def of m.definitions?.slice(0, 2) || []) {
+        meanings.push({ partOfSpeech: m.partOfSpeech, definition: def.definition, example: def.example || '' });
+      }
+    }
+    return { word: clean, phonetic, audioUrl, meanings };
+  } catch (e) { return { error: '网络错误，请稍后重试' }; }
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+const textInput = document.getElementById('textInput');
+const splitBtn = document.getElementById('splitBtn');
+const clearBtn = document.getElementById('clearBtn');
+const audioTranscript = document.getElementById('audioTranscript');
+const audioSplitBtn = document.getElementById('audioSplitBtn');
+const transcribeBtn = document.getElementById('transcribeBtn');
+const sentenceList = document.getElementById('sentenceList');
+const controlsBar = document.getElementById('controlsBar');
+const sentenceCount = document.getElementById('sentenceCount');
+const playAllBtn = document.getElementById('playAllBtn');
+const stopAllBtn = document.getElementById('stopAllBtn');
+const checkModeToggle = document.getElementById('checkModeToggle');
+const tooltipOverlay = document.getElementById('tooltipOverlay');
+const wordTooltip = document.getElementById('wordTooltip');
+const ttWordText = document.getElementById('ttWordText');
+const ttPhonetic = document.getElementById('ttPhonetic');
+const ttMeanings = document.getElementById('ttMeanings');
+const ttPlayWord = document.getElementById('ttPlayWord');
+
+function render() {
+  if (sentences.length === 0) {
+    sentenceList.innerHTML = `<div class="empty-state"><div class="icon">📝</div><p>${currentMode === 'text' ? '粘贴英文短文，按回车键开始听写' : '上传音频并输入文本，点击拆分句子'}</p></div>`;
+    controlsBar.style.display = 'none';
+    return;
+  }
+  controlsBar.style.display = 'flex';
+  sentenceCount.textContent = sentences.length;
+  const checkMode = checkModeToggle.checked;
+  const isAudio = currentMode === 'audio';
+
+  let html = '';
+  sentences.forEach((s, i) => {
+    const words = s.split(/(\s+)/).filter(t => t.length > 0);
+    let wordHtml = '';
+    for (const token of words) {
+      if (/^\s+$/.test(token)) { wordHtml += token; }
+      else {
+        const clean = token.replace(/[^a-zA-Z'-]+/g, '');
+        wordHtml += `<span class="word" data-word="${encodeURIComponent(clean)}" onclick="onWordClick(event, this)">${token}</span>`;
+      }
+    }
+    html += `
+      <div class="sentence-item ${i === playingIndex ? 'playing' : ''}" data-index="${i}">
+        <div class="sentence-index">${i + 1}</div>
+        <div class="sentence-content">
+          <div class="sentence-text">${wordHtml}</div>
+          <div class="sentence-actions">
+            <button class="ctrl-btn ${i === playingIndex ? 'playing' : ''}" onclick="playSentence(${i})">
+              ${i === playingIndex ? '⏸' : '🔊'} 播放
+            </button>
+            ${isAudio && audioSegmentTimings[i] ? `<span class="time" style="font-size:11px;color:var(--text-muted)">${formatDuration(audioSegmentTimings[i].start)}</span>` : ''}
+            ${checkMode ? `<input class="dictation-input" placeholder="写下你听到的..." data-index="${i}" oninput="checkDictation(${i}, this)">` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  sentenceList.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  PLAYBACK
+// ═══════════════════════════════════════════════════════
+let isPlayingAll = false;
+let playAllQueue = [];
+
+function playSentence(index) {
+  stopSpeech();
+  stopAudio();
+  playingIndex = -1;
+  isPlayingAll = false;
+  if (index < 0 || index >= sentences.length) return;
+  playingIndex = index;
+  render();
+
+  if (currentMode === 'audio' && audioBuffer && audioSegmentTimings[index]) {
+    // Audio mode: play segment from original audio
+    const seg = audioSegmentTimings[index];
+    playAudio(seg.start);
+    // We can't auto-stop at segment end easily with the current setup,
+    // but the user can press stop. For "全部播放", it will chain.
+    // Set up a timer to mimic segment-end behavior
+    if (isPlayingAll) {
+      setTimeout(() => {
+        stopAudio();
+        playingIndex = -1;
+        render();
+        if (playAllQueue.length > 0) {
+          setTimeout(() => playSentence(playAllQueue.shift()), 300);
+        }
+      }, (seg.duration / playbackRate) * 1000 + 200);
+    }
+  } else {
+    // Text mode: use TTS
+    speak(sentences[index], {
+      onEnd: () => {
+        playingIndex = -1;
+        render();
+        if (isPlayingAll && playAllQueue.length > 0) {
+          setTimeout(() => playSentence(playAllQueue.shift()), 400);
+        }
+      }
+    });
+  }
+}
+
+function playAll() {
+  if (sentences.length === 0) return;
+  stopSpeech(); stopAudio();
+  playingIndex = -1;
+  isPlayingAll = true;
+  playAllQueue = sentences.map((_, i) => i);
+  playSentence(playAllQueue.shift());
+}
+
+function stopAll() {
+  stopSpeech(); stopAudio();
+  isPlayingAll = false; playAllQueue = [];
+  playingIndex = -1; render();
+}
+
+// ═══════════════════════════════════════════════════════
+//  WORD CLICK & TOOLTIP
+// ═══════════════════════════════════════════════════════
+let currentWord = '';
+
+async function onWordClick(event, el) {
+  const rawWord = decodeURIComponent(el.dataset.word);
+  if (!rawWord || el.classList.contains('loading')) return;
+  el.classList.add('loading');
+  currentWord = rawWord;
+  speakWord(rawWord);
+  showTooltip(event, rawWord, true);
+  document.getElementById('ttMeanings').innerHTML = '<div class="tt-loading">🔍 查询中...</div>';
+  document.getElementById('ttPhonetic').textContent = '';
+  const result = await lookupWord(rawWord);
+  el.classList.remove('loading');
+  if (!result || result.error) {
+    document.getElementById('ttMeanings').innerHTML = `<div class="tt-error">${result?.error || '查询失败'}</div>`;
+    document.getElementById('ttPhonetic').textContent = '';
+    return;
+  }
+  document.getElementById('ttWordText').textContent = result.word;
+  document.getElementById('ttPlayWord').onclick = () => { if (result.audioUrl) { new Audio(result.audioUrl).play(); } else { speakWord(result.word); } };
+  document.getElementById('ttPhonetic').innerHTML = result.phonetic ? `${result.phonetic} <span class="play-phonetic" onclick="speakWord('${result.word.replace(/'/g, "\\'")}')">🔊</span>` : '';
+  let mHtml = '';
+  for (const m of result.meanings) {
+    mHtml += `<div class="tt-meaning-item"><div class="tt-pos">${m.partOfSpeech}</div><div class="tt-def">${m.definition}</div>${m.example ? `<div class="tt-example">"${m.example}"</div>` : ''}</div>`;
+  }
+  document.getElementById('ttMeanings').innerHTML = mHtml || '<div class="tt-error">暂无释义</div>';
+}
+
+function showTooltip(event, word, isLoading) {
+  const rect = event.target.getBoundingClientRect();
+  const tooltipWidth = Math.min(380, window.innerWidth - 32);
+  let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+  let top = rect.bottom + 10;
+  if (left < 8) left = 8;
+  if (left + tooltipWidth > window.innerWidth - 8) left = window.innerWidth - tooltipWidth - 8;
+  wordTooltip.style.left = left + 'px';
+  wordTooltip.style.top = top + 'px';
+  wordTooltip.style.maxWidth = tooltipWidth + 'px';
+  wordTooltip.classList.add('visible');
+  tooltipOverlay.classList.add('visible');
+}
+function hideTooltip() { wordTooltip.classList.remove('visible'); tooltipOverlay.classList.remove('visible'); }
+tooltipOverlay.addEventListener('click', hideTooltip);
+
+// ═══════════════════════════════════════════════════════
+//  DICTATION CHECK
+// ═══════════════════════════════════════════════════════
+function checkDictation(index, input) {
+  const orig = sentences[index].replace(/[^a-zA-Z\s'-]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const user = input.value.replace(/[^a-zA-Z\s'-]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (!user) { input.classList.remove('dictation-correct', 'dictation-wrong'); return; }
+  input.classList.add(user === orig ? 'dictation-correct' : 'dictation-wrong');
+  input.classList.remove(user === orig ? 'dictation-wrong' : 'dictation-correct');
+}
+
+// ═══════════════════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════════════════
+const HISTORY_KEY = 'englishDictationHistory';
+const MAX_HISTORY = 50;
+
+function getHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch { return []; } }
+function saveHistoryEntry(text, sents) {
+  if (!text.trim() || sents.length === 0) return;
+  const history = getHistory();
+  history.unshift({ id: Date.now()+'_'+Math.random().toString(36).slice(2,6), timestamp: Date.now(), title: text.replace(/\s+/g,' ').trim().slice(0,80), text, sentenceCount: sents.length });
+  if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+function deleteHistoryEntry(id) { let h = getHistory(); h = h.filter(e => e.id !== id); localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); renderHistoryModal(); }
+function clearAllHistory() { if (!confirm('确定清空所有历史记录？')) return; localStorage.removeItem(HISTORY_KEY); renderHistoryModal(); }
+
+function renderHistoryModal() {
+  const history = getHistory();
+  const body = document.getElementById('historyBody');
+  const count = document.getElementById('historyCount');
+  const footerInfo = document.getElementById('historyFooterInfo');
+  count.textContent = history.length > 0 ? `(${history.length})` : '';
+  if (history.length === 0) { body.innerHTML = '<div class="history-empty"><div class="icon">📭</div><p>还没有听写记录</p></div>'; footerInfo.textContent = ''; return; }
+  let html = '';
+  for (const entry of history) {
+    const date = new Date(entry.timestamp);
+    const dateStr = date.toLocaleDateString('zh-CN',{month:'short',day:'numeric'});
+    const timeStr = date.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+    html += `<div class="history-item" data-id="${entry.id}"><div class="history-item-icon">📄</div><div class="history-item-info"><div class="history-item-title">${escapeHtml(entry.title)}</div><div class="history-item-meta"><span>${dateStr} ${timeStr}</span><span>${entry.sentenceCount} 句</span></div></div><button class="history-item-del" data-id="${entry.id}" onclick="event.stopPropagation();deleteHistoryEntry('${entry.id}')">✕</button></div>`;
+  }
+  body.innerHTML = html;
+  footerInfo.textContent = `共 ${history.length} 条记录`;
+  body.querySelectorAll('.history-item').forEach(el => { el.addEventListener('click', () => restoreHistory(el.dataset.id)); });
+}
+function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+function restoreHistory(id) {
+  const entry = getHistory().find(e => e.id === id);
+  if (!entry) return;
+  document.getElementById('textInput').value = entry.text;
+  closeHistoryModal();
+  switchMode('text');
+  doSplit();
+}
+function openHistoryModal() { renderHistoryModal(); document.getElementById('historyOverlay').classList.add('visible'); document.body.style.overflow = 'hidden'; }
+function closeHistoryModal() { document.getElementById('historyOverlay').classList.remove('visible'); document.body.style.overflow = ''; }
+
+// ═══════════════════════════════════════════════════════
+//  MODE SWITCHING
+// ═══════════════════════════════════════════════════════
+function switchMode(mode) {
+  currentMode = mode;
+  stopSpeech(); stopAudio();
+  playingIndex = -1; isPlayingAll = false; playAllQueue = [];
+  sentences = []; audioSegmentTimings = [];
+  render();
+  
+  document.getElementById('panelText').style.display = mode === 'text' ? 'block' : 'none';
+  document.getElementById('panelAudio').style.display = mode === 'audio' ? 'block' : 'none';
+  document.getElementById('tabText').classList.toggle('active', mode === 'text');
+  document.getElementById('tabAudio').classList.toggle('active', mode === 'audio');
+  hideTooltip();
+}
+
+// ═══════════════════════════════════════════════════════
+//  MAIN ACTIONS
+// ═══════════════════════════════════════════════════════
+function doSplit() {
+  sentences = splitSentences(textInput.value);
+  playingIndex = -1; isPlayingAll = false; playAllQueue = [];
+  render(); hideTooltip();
+  if (sentences.length > 0) saveHistoryEntry(textInput.value, sentences);
+}
+
+function doAudioSplit() {
+  const text = audioTranscript.value.trim();
+  if (!text) { statusMsg('⚠️ 请输入或转写音频文本后再拆分'); return; }
+  sentences = splitSentences(text);
+  playingIndex = -1; isPlayingAll = false; playAllQueue = [];
+  
+  // Compute segment timings
+  if (audioBuffer && sentences.length > 0) {
+    audioSegmentTimings = estimateSegmentTimings(text, audioDuration);
+  } else {
+    audioSegmentTimings = [];
+  }
+  
+  render(); hideTooltip();
+  statusMsg(`✅ 已拆分为 ${sentences.length} 句${audioBuffer ? '，点击句子播放对应音频段落' : ''}`);
+  if (sentences.length > 0) saveHistoryEntry(text, sentences);
+}
+
+function statusMsg(msg) {
+  document.getElementById('audioStatus').textContent = msg;
+}
+
+// ═══════════════════════════════════════════════════════
+//  EVENTS
+// ═══════════════════════════════════════════════════════
+// Text mode
+textInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSplit(); } });
+splitBtn.addEventListener('click', doSplit);
+clearBtn.addEventListener('click', () => { textInput.value = ''; sentences = []; playingIndex = -1; isPlayingAll = false; playAllQueue = []; render(); hideTooltip(); textInput.focus(); });
+
+// Audio mode
+audioSplitBtn.addEventListener('click', doAudioSplit);
+transcribeBtn.addEventListener('click', () => {
+  if (isRecognizing) { stopRecognition(); return; }
+  startRecognition();
+});
+
+// Audio upload
+document.getElementById('uploadZone').addEventListener('click', () => document.getElementById('audioFileInput').click());
+document.getElementById('audioFileInput').addEventListener('change', async (e) => {
+  if (e.target.files.length > 0) {
+    await loadAudioFile(e.target.files[0]);
+  }
+});
+// Drag and drop
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', async (e) => {
+  e.preventDefault(); uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length > 0) await loadAudioFile(e.dataTransfer.files[0]);
+});
+
+// Audio player controls
+document.getElementById('audioPlayBtn').addEventListener('click', () => {
+  if (!audioBuffer) return;
+  if (audioIsPlaying) { pauseAudio(); }
+  else {
+    // If at end, restart
+    if (audioPauseOffset >= audioDuration - 0.5) audioPauseOffset = 0;
+    playAudio(audioPauseOffset);
+  }
+});
+document.getElementById('audioProgressWrap').addEventListener('click', (e) => {
+  if (!audioBuffer) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  seekAudio(pct * audioDuration);
+});
+
+// Handle playback rate changes for audio
+const origSliderHandler = speedSlider.oninput;
+speedSlider.addEventListener('input', () => {
+  playbackRate = parseFloat(speedSlider.value);
+  speedLabel.textContent = playbackRate.toFixed(1) + 'x';
+  // Update audio playback rate if playing
+  if (audioSource && audioIsPlaying) {
+    audioSource.playbackRate.value = playbackRate;
+  }
+});
+
+// Mode tabs
+document.getElementById('tabText').addEventListener('click', () => switchMode('text'));
+document.getElementById('tabAudio').addEventListener('click', () => switchMode('audio'));
+
+// Playback controls
+playAllBtn.addEventListener('click', playAll);
+stopAllBtn.addEventListener('click', stopAll);
+checkModeToggle.addEventListener('change', render);
+
+// History
+document.getElementById('historyBtn').addEventListener('click', openHistoryModal);
+document.getElementById('historyCloseBtn').addEventListener('click', closeHistoryModal);
+document.getElementById('historyOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeHistoryModal(); });
+document.getElementById('historyClearBtn').addEventListener('click', clearAllHistory);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeHistoryModal(); });
+
+// ═══════════════════════════════════════════════════════
+//  VOCABEAR PROMO
+// ═══════════════════════════════════════════════════════
+(function initPromo() {
+  const btn = document.getElementById('promoBtn');
+  const note = document.getElementById('promoNote');
+  const isWechat = navigator.userAgent.toLowerCase().includes('micromessenger');
+  if (isWechat) {
+    btn.textContent = '📲 打开 VocabEar';
+    btn.href = 'weixin://dl/business/?appid=wxc75e6cd99d1d7547';
+    note.textContent = '点击按钮直接在微信中打开 VocabEar 小程序';
+  } else {
+    btn.addEventListener('click', (e) => { e.preventDefault(); note.textContent = '💡 请用微信扫描二维码，或搜索「VocabEar」使用'; note.style.color = 'var(--accent)'; });
+    note.textContent = '微信中打开本页面可直接跳转小程序';
+  }
+})();
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+initVoice();
+textInput.focus();
+console.log('📝 逐句听写已加载！');
+</script>
+</body>
+</html>
