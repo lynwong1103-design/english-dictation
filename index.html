@@ -223,6 +223,13 @@
   .promo-qr { flex-shrink: 0; position: relative; z-index: 1; text-align: center; }
   .promo-qr img { width: 120px; height: 120px; border-radius: 8px; display: block; background: #fff; padding: 6px; }
   .promo-qr .qr-label { font-size: 10px; color: #8896a8; margin-top: 6px; letter-spacing: .5px; }
+
+  .promo-find { text-align: left; font-size: 13px; line-height: 1.8; }
+  .promo-find .find-title { font-size: 14px; font-weight: 700; color: var(--accent-light); margin-bottom: 8px; }
+  .promo-find .find-step { color: #c8d0dc; display: flex; align-items: center; gap: 8px; }
+  .promo-find .find-num { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(218,165,32,.2); color: var(--accent-light); font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .promo-find .find-or { text-align: center; color: #5a6a80; font-size: 11px; margin: 4px 0; letter-spacing: 1px; }
+  .promo-find .find-note { font-size: 10px; color: #6a7a90; text-align: center; margin-top: 6px; line-height: 1.5; }
   .promo-note { text-align: center; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
 
   /* ── Footer ── */
@@ -269,6 +276,8 @@
     .promo-features { justify-content: center; }
     .promo-link { width: 100%; justify-content: center; }
     .promo-qr img { width: 100px; height: 100px; }
+    .promo-find { font-size: 12px; }
+    .promo-find .find-note br { display: none; }
     .controls-left { width: 100%; }
     .controls-left .count { width: 100%; }
     .speed-control { margin-left: 0; }
@@ -398,8 +407,18 @@
         </div>
       </div>
       <div class="promo-qr">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=weixin://dl/business/?appid=wxc75e6cd99d1d7547" alt="VocabEar QR Code" loading="lazy">
-        <div class="qr-label">微信扫码体验</div>
+        <div class="promo-find">
+          <div class="find-title">📲 如何找到 VocabEar</div>
+          <div class="find-step"><span class="find-num">1</span> 打开微信</div>
+          <div class="find-step"><span class="find-num">2</span> 点击「发现」→「小程序」</div>
+          <div class="find-step"><span class="find-num">3</span> 搜索 <strong>「VocabEar」</strong></div>
+          <div class="find-or">或</div>
+          <div class="find-step"><span class="find-num">4</span> 扫描下方小程序码 <span style="font-size:11px;color:#8896a8;">（需用微信扫一扫）</span></div>
+          <div style="margin-top:10px;">
+            <img src="vocabear-qr.jpg" alt="VocabEar 小程序码" loading="lazy" style="width:120px;height:120px;border-radius:8px;display:block;margin:0 auto;background:#fff;padding:4px;">
+          </div>
+          <div class="find-note">✅ 微信扫一扫此码，直接打开 VocabEar</div>
+        </div>
       </div>
     </div>
     <div class="promo-note" id="promoNote"></div>
@@ -1123,10 +1142,10 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeHisto
   if (isWechat) {
     btn.textContent = '📲 打开 VocabEar';
     btn.href = 'weixin://dl/business/?appid=wxc75e6cd99d1d7547';
-    note.textContent = '点击按钮直接在微信中打开 VocabEar 小程序';
+    note.textContent = '点击按钮直接打开 VocabEar 小程序';
   } else {
-    btn.addEventListener('click', (e) => { e.preventDefault(); note.textContent = '💡 请用微信扫描二维码，或搜索「VocabEar」使用'; note.style.color = 'var(--accent)'; });
-    note.textContent = '微信中打开本页面可直接跳转小程序';
+    btn.addEventListener('click', (e) => { e.preventDefault(); note.textContent = '💡 打开微信 → 点击右上角「扫一扫」扫描小程序码，或搜索「VocabEar」'; note.style.color = 'var(--accent)'; });
+    note.textContent = '微信中打开可直接跳转，或在微信搜索「VocabEar」';
   }
 })();
 
