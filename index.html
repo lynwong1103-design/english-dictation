@@ -184,8 +184,8 @@
   .word-tooltip {
     position: fixed; z-index: 1000; background: var(--card-bg); border-radius: var(--radius-lg);
     box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06); padding: 16px 20px;
-    max-width: 380px; min-width: 180px; display: none; border: 1px solid #eee;
-    animation: popIn .2s ease; overflow-y: auto;
+    max-width: 380px; min-width: 180px; max-height: 60vh; display: none; border: 1px solid #eee;
+    animation: popIn .2s ease; overflow-y: auto; overscroll-behavior: contain;
   }
   @keyframes popIn { from { opacity: 0; transform: translateY(6px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
   .word-tooltip.visible { display: block; }
@@ -938,12 +938,14 @@ async function onWordClick(event, el) {
     mHtml += `<div class="tt-meaning-item"><div class="tt-pos">${m.partOfSpeech}</div><div class="tt-def">${m.definition}</div>${m.example ? `<div class="tt-example">"${m.example}"</div>` : ''}</div>`;
   }
   document.getElementById('ttMeanings').innerHTML = mHtml || '<div class="tt-error">暂无释义</div>';
+  // Reset tooltip scroll to top after content loads
+  wordTooltip.scrollTop = 0;
 }
 
 function showTooltip(event, word, isLoading) {
   const rect = event.target.getBoundingClientRect();
   const tooltipWidth = Math.min(360, window.innerWidth - 24);
-  const tooltipHeight = Math.min(300, window.innerHeight * 0.6);
+  const tooltipMaxHeight = Math.min(400, window.innerHeight * 0.7);
 
   // Horizontal: center under the word, clamp to viewport
   let left = rect.left + rect.width / 2 - tooltipWidth / 2;
@@ -954,26 +956,26 @@ function showTooltip(event, word, isLoading) {
   const spaceBelow = window.innerHeight - rect.bottom;
   const spaceAbove = rect.top;
 
-  if (spaceBelow >= tooltipHeight + 12) {
+  if (spaceBelow >= tooltipMaxHeight + 12) {
     top = rect.bottom + 8;
-  } else if (spaceAbove >= tooltipHeight + 12) {
-    top = rect.top - tooltipHeight - 8;
+  } else if (spaceAbove >= tooltipMaxHeight + 12) {
+    top = rect.top - tooltipMaxHeight - 8;
   } else {
-    // Not enough room either way, place at the side
-    top = Math.max(12, Math.min(rect.top, window.innerHeight - tooltipHeight - 12));
+    // Not enough room either way, take the larger side
+    top = spaceBelow >= spaceAbove
+      ? rect.bottom + 8
+      : Math.max(12, rect.top - tooltipMaxHeight - 8);
   }
 
-  // Ensure tooltip stays within viewport vertically
-  top = Math.max(12, Math.min(top, window.innerHeight - tooltipHeight - 12));
+  // Final viewport clamp
+  top = Math.max(12, Math.min(top, window.innerHeight - 80));
 
   wordTooltip.style.left = left + 'px';
   wordTooltip.style.top = top + 'px';
   wordTooltip.style.maxWidth = tooltipWidth + 'px';
-  wordTooltip.style.maxHeight = tooltipHeight + 'px';
+  wordTooltip.style.maxHeight = tooltipMaxHeight + 'px';
 
-  // Reset overflow for short content
-  wordTooltip.style.overflowY = tooltipHeight >= 300 ? 'hidden' : 'auto';
-
+  wordTooltip.scrollTop = 0;
   wordTooltip.classList.add('visible');
   tooltipOverlay.classList.add('visible');
 }
