@@ -323,10 +323,16 @@
     </header>
     <div class="card input-card">
       <textarea id="textInput" placeholder="Paste an English passage here...&#10;&#10;e.g. The quick brown fox jumps over the lazy dog. It is a beautiful day today."></textarea>
-      <div class="input-hint">粘贴后按 <kbd>Enter</kbd> 拆分 · <kbd>Shift+Enter</kbd> 换行</div>
+      <div class="input-hint">粘贴后按 <kbd>Enter</kbd> 拆分 · <kbd>Shift+Enter</kbd> 换行 · <button class="btn btn-secondary btn-sm" id="audioGenBtn" style="padding:1px 10px;font-size:11px;vertical-align:middle;">🔊 生成音频下载</button></div>
       <div class="input-actions">
         <button class="btn btn-secondary" id="clearBtn">🗑 清空</button>
         <button class="btn btn-primary" id="splitBtn">✂️ 拆分句子</button>
+      </div>
+      <div id="audioGenResult" style="display:none;margin-top:10px;padding:10px 14px;background:#f7f5f1;border-radius:8px;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:13px;color:var(--text-light);">🎧 音频已生成</span>
+        <button class="ctrl-btn" id="audioGenPlayBtn" style="font-size:12px;">▶ 试听</button>
+        <a id="audioGenDownloadLink" class="btn btn-accent btn-sm" style="text-decoration:none;padding:4px 14px;font-size:12px;" download="english-tts.mp3">⬇ 下载 MP3</a>
+        <span style="font-size:11px;color:var(--text-muted);" id="audioGenSize"></span>
       </div>
     </div>
   </div>
@@ -1163,7 +1169,61 @@ function statusMsg(msg, isTemp = true) {
 // Text mode
 textInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSplit(); } });
 splitBtn.addEventListener('click', doSplit);
-clearBtn.addEventListener('click', () => { textInput.value = ''; sentences = []; playingIndex = -1; isPlayingAll = false; playAllQueue = []; render(); hideTooltip(); textInput.focus(); });
+// ─── Generate Audio Download ────────────────────────
+let audioGenBlob = null;
+let audioGenUrl = null;
+
+document.getElementById('audioGenBtn').addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) { alert('请先输入英文文本'); return; }
+
+  const btn = document.getElementById('audioGenBtn');
+  const result = document.getElementById('audioGenResult');
+  const link = document.getElementById('audioGenDownloadLink');
+  const playBtn = document.getElementById('audioGenPlayBtn');
+  const sizeSpan = document.getElementById('audioGenSize');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中…';
+
+  // Clean up old blob URL
+  if (audioGenUrl) { URL.revokeObjectURL(audioGenUrl); audioGenUrl = null; }
+  audioGenBlob = null;
+
+  try {
+    // Try Google Translate TTS
+    const q = encodeURIComponent(text.slice(0, 200));
+    const resp = await fetch(`https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${q}`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    audioGenBlob = await resp.blob();
+    audioGenUrl = URL.createObjectURL(audioGenBlob);
+
+    result.style.display = 'flex';
+    link.href = audioGenUrl;
+    playBtn.onclick = () => { const a = new Audio(audioGenUrl); a.playbackRate = playbackRate; a.play(); };
+    sizeSpan.textContent = `(${(audioGenBlob.size / 1024).toFixed(0)} KB)`;
+  } catch (e) {
+    // Fallback: use SpeechSynthesis play only, no download
+    result.style.display = 'flex';
+    link.style.display = 'none';
+    playBtn.onclick = () => {
+      stopSpeech();
+      speak(text, { rate: playbackRate });
+    };
+    sizeSpan.textContent = '⚠️ 在线生成受限，已切换为浏览器朗读';
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔊 生成音频下载';
+});
+
+// Clean up on clear
+clearBtn.addEventListener('click', () => {
+  if (audioGenUrl) { URL.revokeObjectURL(audioGenUrl); audioGenUrl = null; }
+  audioGenBlob = null;
+  document.getElementById('audioGenResult').style.display = 'none';
+  textInput.value = ''; sentences = []; playingIndex = -1; isPlayingAll = false; playAllQueue = []; render(); hideTooltip(); textInput.focus();
+});
 
 // Audio mode
 audioSplitBtn.addEventListener('click', doAudioSplit);
