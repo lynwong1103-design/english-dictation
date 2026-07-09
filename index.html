@@ -897,7 +897,7 @@ function render() {
           <div class="sentence-text">${wordHtml}</div>
           <div class="sentence-trans${transToggle.checked ? ' visible' : ''}" data-index="${i}">${transCache[i] || (transToggle.checked ? '<span class="trans-loading">翻译中…</span>' : '')}</div>
           <div class="sentence-actions">
-            <button class="ctrl-btn ${i === playingIndex ? 'playing' : ''}" onclick="playSentence(${i})">
+            <button class="ctrl-btn ${i === playingIndex ? 'playing' : ''}" onclick="playSingle(${i})">
               ${i === playingIndex ? '⏸' : '🔊'} 播放
             </button>
             ${isAudio && audioSegmentTimings[i] ? `<span class="time" style="font-size:11px;color:var(--text-muted)">${formatDuration(audioSegmentTimings[i].start)}</span>` : ''}
@@ -916,11 +916,16 @@ function render() {
 let isPlayingAll = false;
 let playAllQueue = [];
 
+function playSingle(index) {
+  isPlayingAll = false;
+  playAllQueue = [];
+  playSentence(index);
+}
+
 function playSentence(index) {
   stopSpeech();
   stopAudio();
   playingIndex = -1;
-  isPlayingAll = false;
   if (index < 0 || index >= sentences.length) return;
   playingIndex = index;
   render();
